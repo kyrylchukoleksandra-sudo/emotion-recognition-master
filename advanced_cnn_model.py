@@ -99,7 +99,7 @@ def build_model(hp):
     )
     return model
 
-# --- Tuner ---
+# --- Load Tuner from directory with previous results ---
 tuner = kt.Hyperband(
     build_model,
     objective='val_accuracy',
@@ -108,111 +108,95 @@ tuner = kt.Hyperband(
     directory='kt_dir',
     project_name='fer2013_tuning'
 )
+# This will reload the state from previous runs if available
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+# --- Get best hyperparameters ---
+best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
 
-# --- Головна функція для пошуку з оптимізацією batch_size ---
-def run_tuner_with_batchsize():
-    batch_sizes = [16, 32, 64, 128]
-    best_score = -np.inf
-    best_trial = None
-    best_hp = None
+# --- Print best hyperparameters ---
+print("Best hyperparameters found:")
+for param in ['l2', 'learning_rate', 'dropout', 'dense_units']:
+    print(f"{param}: {best_hp.get(param)}")
 
-    for batch_size in batch_sizes:
-        print(f"\n--- Tuning with batch_size={batch_size} ---")
-        train_gen = FER2013DataGenerator('fer2013_processed/Training', emotion_labels, batch_size=batch_size, shuffle=True)
-        val_gen = FER2013DataGenerator('fer2013_processed/PublicTest', emotion_labels, batch_size=batch_size, shuffle=False)
+# --- batch_size: якщо є в best_hp, використовуй його, якщо ні — підстав вручну (наприклад, 32) ---
+if 'batch_size' in best_hp.values:
+    batch_size = best_hp.get('batch_size')
+    print(f"batch_size (from tuner): {batch_size}")
+else:
+    batch_size = 32  # <-- підстав свій batch_size, якщо його немає в best_hp
+    print(f"batch_size (manual): {batch_size}")
 
-        tuner.search(
-            train_gen,
-            validation_data=val_gen,
-            epochs=20,
-            callbacks=[stop_early]
-        )
+# --- Data Generators ---
+train_gen = FER2013DataGenerator('fer2013_processed/Training', emotion_labels, batch_size=batch_size, shuffle=True)
+val_gen = FER2013DataGenerator('fer2013_processed/PublicTest', emotion_labels, batch_size=batch_size, shuffle=False)
+test_gen = FER2013DataGenerator('fer2013_processed/PrivateTest', emotion_labels, batch_size=batch_size, shuffle=False)
 
-        trial_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
-        val_acc = tuner.oracle.get_best_trials(1)[0].metrics.get_last_value('val_accuracy')
-        print(f"Best val_accuracy for batch_size={batch_size}: {val_acc}")
+# --- EarlyStopping ---
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=25, restore_best_weights=True)
 
-        if val_acc > best_score:
-            best_score = val_acc
-            best_trial = batch_size
-            best_hp = trial_hp
+# --- Build and train model with best hyperparameters ---
+model = tuner.hypermodel.build(best_hp)
+history = model.fit(
+    train_gen,
+    validation_data=val_gen,
+    epochs=40,
+    callbacks=[stop_early]
+)
 
-    print(f"\nBest batch_size: {best_trial}")
-    print(f"Best hyperparameters: learning_rate={best_hp.get('learning_rate')}, l2={best_hp.get('l2')}, dropout={best_hp.get('dropout')}, dense_units={best_hp.get('dense_units')}")
+# --- Plot Training History and Save ---
+plt.figure(figsize=(12,5))
+plt.subplot(1,2,1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.title('Accuracy')
 
-    # --- Побудова та навчання фінальної моделі ---
-    train_gen = FER2013DataGenerator('fer2013_processed/Training', emotion_labels, batch_size=best_trial, shuffle=True)
-    val_gen = FER2013DataGenerator('fer2013_processed/PublicTest', emotion_labels, batch_size=best_trial, shuffle=False)
-    test_gen = FER2013DataGenerator('fer2013_processed/PrivateTest', emotion_labels, batch_size=best_trial, shuffle=False)
+plt.subplot(1,2,2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Loss')
+plt.tight_layout()
+plt.savefig('training_history_advanced_1.png')
+plt.close()
 
-    model = tuner.hypermodel.build(best_hp)
-    history = model.fit(
-        train_gen,
-        validation_data=val_gen,
-        epochs=40,
-        callbacks=[stop_early]
-    )
+# --- Evaluation ---
+test_loss, test_acc = model.evaluate(test_gen)
+with open('test_results_advanced.txt', 'w') as f:
+    f.write(f"Test loss: {test_loss:.4f}\n")
+    f.write(f"Test accuracy: {test_acc:.4f}\n")
 
-    # --- Plot Training History and Save ---
-    plt.figure(figsize=(12,5))
-    plt.subplot(1,2,1)
-    plt.plot(history.history['accuracy'], label='Train Accuracy')
-    plt.plot(history.history['val_accuracy'], label='Val Accuracy')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.title('Accuracy')
+# --- Confusion Matrix and Save ---
+X_test, y_test = [], []
+for i in range(len(test_gen)):
+    X_batch, y_batch = test_gen[i]
+    X_test.append(X_batch)
+    y_test.append(y_batch)
+X_test = np.concatenate(X_test, axis=0)
+y_test = np.concatenate(y_test, axis=0)
 
-    plt.subplot(1,2,2)
-    plt.plot(history.history['loss'], label='Train Loss')
-    plt.plot(history.history['val_loss'], label='Val Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Loss')
-    plt.tight_layout()
-    plt.savefig('training_history_advanced.png')
-    plt.close()
+y_pred = model.predict(X_test)
+y_pred_classes = np.argmax(y_pred, axis=1)
 
-    # --- Evaluation ---
-    test_loss, test_acc = model.evaluate(test_gen)
-    with open('test_results_advanced.txt', 'w') as f:
-        f.write(f"Test loss: {test_loss:.4f}\n")
-        f.write(f"Test accuracy: {test_acc:.4f}\n")
+cm = confusion_matrix(y_test, y_pred_classes)
+plt.figure(figsize=(8,6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=emotion_labels, yticklabels=emotion_labels)
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.title('Confusion Matrix (Advanced Model)')
+plt.savefig('confusion_matrix_advanced_1.png')
+plt.close()
 
-    # --- Confusion Matrix and Save ---
-    X_test, y_test = [], []
-    for i in range(len(test_gen)):
-        X_batch, y_batch = test_gen[i]
-        X_test.append(X_batch)
-        y_test.append(y_batch)
-    X_test = np.concatenate(X_test, axis=0)
-    y_test = np.concatenate(y_test, axis=0)
+# --- Classification Report and Save ---
+report = classification_report(y_test, y_pred_classes, target_names=emotion_labels)
+with open('classification_report_advanced_1.txt', 'w') as f:
+    f.write(report)
 
-    y_pred = model.predict(X_test)
-    y_pred_classes = np.argmax(y_pred, axis=1)
+# --- Save Model ---
+model.save('fer2013_cnn_model_advanced_best_1.h5')
 
-    cm = confusion_matrix(y_test, y_pred_classes)
-    plt.figure(figsize=(8,6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=emotion_labels, yticklabels=emotion_labels)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix (Advanced Model)')
-    plt.savefig('confusion_matrix_advanced.png')
-    plt.close()
-
-    # --- Classification Report and Save ---
-    report = classification_report(y_test, y_pred_classes, target_names=emotion_labels)
-    with open('classification_report_advanced.txt', 'w') as f:
-        f.write(report)
-
-    # --- Save Model ---
-    model.save('fer2013_cnn_model_advanced.h5')
-
-    print("All results saved: training_history_advanced.png, confusion_matrix_advanced.png, test_results_advanced.txt, classification_report_advanced.txt, fer2013_cnn_model_advanced.h5")
-
-
-if __name__ == "__main__":
-    run_tuner_with_batchsize()
+print("All results saved: training_history_advanced.png, confusion_matrix_advanced.png, test_results_advanced.txt, classification_report_advanced.txt, fer2013_cnn_model_advanced_best.h5")

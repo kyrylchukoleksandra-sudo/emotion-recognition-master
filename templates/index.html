@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Emotion Recognition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #fff;
+            padding: 2.5rem 2rem;
+            border-radius: 28px;
+            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.18);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        h1 {
+            color: #2d3a4b;
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        form {
+            margin-bottom: 2rem;
+        }
+        .custom-file-input {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            background: #e3f6fc;
+            color: #2d3a4b;
+            padding: 0.7rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            transition: background 0.2s, border 0.2s, color 0.2s;
+            border: 2px dashed #74ebd5;
+        }
+        .file-label:hover, .file-label:focus {
+            background: #b6eaff;
+            border: 2px solid #57c6e1;
+            color: #1b2838;
+        }
+        .file-name {
+            display: block;
+            margin-bottom: 1.2rem;
+            color: #888;
+            font-size: 0.98rem;
+            min-height: 1.2em;
+        }
+        button {
+            background: #74ebd5;
+            color: #2d3a4b;
+            border: none;
+            padding: 0.8rem 2.2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+            transition: background 0.2s, transform 0.2s;
+        }
+        button:hover {
+            background: #57c6e1;
+            transform: scale(1.04);
+        }
+        .result-card {
+            margin-top: 1.5rem;
+            padding: 1.2rem 1rem;
+            background: #e3f6fc;
+            border-radius: 14px;
+
+            color: #1b2838;
+            font-size: 1.35rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+        }
+        .result-card i {
+            font-size: 2.2rem;
+            color: #74ebd5;
+        }
+        @media (max-width: 500px) {
+            .container {
+                padding: 1.2rem 0.5rem;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Emotion Recognition</h1>
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <label class="file-label" for="fileInput">
+                <i class="fa-solid fa-image"></i> Choose Image
+            </label>
+            <input type="file" name="image" accept="image/*" required class="custom-file-input" id="fileInput" onchange="updateFileName()">
+            <span class="file-name" id="fileName">No file selected</span>
+            <button type="submit">Upload & Analyze</button>
+        </form>
+        {% if emotion %}
+    <div style="display: flex; align-items: center; justify-content: center; gap: 2rem; margin-top: 2rem;">
+        <div>
+            <img src="data:image/png;base64,{{ img_base64 }}" alt="Uploaded image" style="border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.08); width: 64px; height: 64px;">
+            <div style="font-size: 0.9rem; color: #888; margin-top: 0.5rem;">Processed image</div>
+        </div>
+        <div class="result-card">
+            <i class="fa-solid fa-face-{{ 'smile' if emotion == 'happy' else 'frown' if emotion == 'sad' else 'meh' }}"></i>
+            Predicted emotion: <span style="font-weight:700;">{{ emotion|capitalize }}</span>
+        </div>
+    </div>
+{% endif %}
+    </div>
+    <script>
+        function updateFileName() {
+            const input = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
+            fileName.textContent = input.files.length > 0 ? input.files[0].name : 'No file selected';
+        }
+    </script>
+</body>
+</html>
