@@ -48,6 +48,25 @@ def preprocess_image(file_stream):
         else:
             raise ValueError("Cannot read the image. Please upload a valid image file.")
 
+    # --- FACE DETECTION AND CROPPING ---
+    # Convert PIL image to OpenCV format
+    img_cv = np.array(img)
+    if img_cv.ndim == 2:
+        img_gray = img_cv
+    else:
+        img_gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+
+    # Load Haar cascade
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    faces = face_cascade.detectMultiScale(img_gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    if len(faces) > 0:
+        # Take the largest face
+        x, y, w, h = max(faces, key=lambda rect: rect[2]*rect[3])
+        face_img = img.crop((x, y, x + w, y + h))
+        img = face_img
+    # Якщо обличчя не знайдено — використовуємо все зображення
+
     # 4. Convert to grayscale, resize, normalize
     img = img.convert('L')
     img = img.resize((64, 64))
@@ -56,7 +75,6 @@ def preprocess_image(file_stream):
     img_np = np.expand_dims(img_np, axis=0)
 
     # 5. Convert processed image to base64 for display
-    # Convert back to PIL for encoding
     img_display = Image.fromarray((img_np[0, :, :, 0] * 255).astype(np.uint8))
     buffered = io.BytesIO()
     img_display.save(buffered, format="PNG")
@@ -70,7 +88,17 @@ def index():
     error = None
     img_base64 = None
     if request.method == 'POST':
-        file = request.files['image']
+        file = request.files.get('image')
+        camera_image_data = request.form.get('camera_image')
+        if camera_image_data:
+            # Обробка фото з камери (dataURL)
+            try:
+                header, encoded = camera_image_data.split(",", 1)
+                file_bytes = base64.b64decode(encoded)
+                file = io.BytesIO(file_bytes)
+            except Exception:
+                error = "Invalid camera image data."
+                return render_template('index.html', emotion=emotion, error=error, img_base64=img_base64)
         if file:
             try:
                 img, img_base64 = preprocess_image(file)

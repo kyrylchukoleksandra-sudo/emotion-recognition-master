@@ -22,9 +22,12 @@
             border-radius: 28px;
             box-shadow: 0 8px 32px rgba(44, 62, 80, 0.18);
             text-align: center;
-            max-width: 400px;
+            max-width: 800px;
             width: 100%;
             animation: fadeIn 1s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(30px);}
@@ -39,6 +42,16 @@
         }
         form {
             margin-bottom: 2rem;
+            width: 100%;
+        }
+        .form-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
         }
         .custom-file-input {
             display: none;
@@ -52,7 +65,6 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
-            margin-bottom: 1rem;
             transition: background 0.2s, border 0.2s, color 0.2s;
             border: 2px dashed #74ebd5;
         }
@@ -63,33 +75,63 @@
         }
         .file-name {
             display: block;
-            margin-bottom: 1.2rem;
             color: #888;
             font-size: 0.98rem;
+            min-width: 120px;
             min-height: 1.2em;
+            text-align: left;
         }
-        button {
+        .action-btn {
             background: #74ebd5;
             color: #2d3a4b;
             border: none;
-            padding: 0.8rem 2.2rem;
+            padding: 0.8rem 1.6rem;
             border-radius: 10px;
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
             transition: background 0.2s, transform 0.2s;
+            margin: 0 0.2rem;
         }
-        button:hover {
+        .action-btn:hover {
             background: #57c6e1;
             transform: scale(1.04);
         }
+        #openCameraBtn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #cameraContainer {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        #video {
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+        }
+        #canvas {
+            display: none;
+            margin-top: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+        }
+        .result-section {
+            display:
+ flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            margin-top: 2rem;
+        }
         .result-card {
-            margin-top: 1.5rem;
             padding: 1.2rem 1rem;
             background: #e3f6fc;
             border-radius: 14px;
-
             color: #1b2838;
             font-size: 1.35rem;
             font-weight: 600;
@@ -103,7 +145,36 @@
             font-size: 2.2rem;
             color: #74ebd5;
         }
-        @media (max-width: 500px) {
+        .processed-img-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .processed-img-block img {
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+            width: 64px;
+            height: 64px;
+        }
+        .processed-img-block .desc {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+        @media (max-width: 900px) {
+            .container {
+                max-width: 98vw;
+            }
+            .result-section {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+        }
+        @media (max-width: 600px) {
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
             .container {
                 padding: 1.2rem 0.5rem;
             }
@@ -117,25 +188,39 @@
     <div class="container">
         <h1>Emotion Recognition</h1>
         <form method="post" enctype="multipart/form-data" id="uploadForm">
-            <label class="file-label" for="fileInput">
-                <i class="fa-solid fa-image"></i> Choose Image
-            </label>
-            <input type="file" name="image" accept="image/*" required class="custom-file-input" id="fileInput" onchange="updateFileName()">
-            <span class="file-name" id="fileName">No file selected</span>
-            <button type="submit">Upload & Analyze</button>
+            <div class="form-row">
+                <label class="file-label" for="fileInput">
+                    <i class="fa-solid fa-image"></i> Choose Image
+                </label>
+                <input type="file" name="image" accept="image/*" class="custom-file-input" id="fileInput" onchange="updateFileName()">
+                <span class="file-name" id="fileName">No file selected</span>
+                <button type="button" class="action-btn" id="openCameraBtn">
+                    <i class="fa-solid fa-camera"></i> Use Camera
+                </button>
+                <button type="submit" class="action-btn">Upload & Analyze</button>
+            </div>
+            <div id="cameraContainer">
+                <video id="video" width="220" height="165" autoplay></video>
+                <button type="button" class="action-btn" id="snapBtn" style="margin-top:10px;">Take Photo</button>
+                <canvas id="canvas" width="220" height="165"></canvas>
+            </div>
+            <input type="hidden" name="camera_image" id="cameraImageInput">
         </form>
+        {% if error %}
+            <div style="color: red; margin-bottom: 1rem;">{{ error }}</div>
+        {% endif %}
         {% if emotion %}
-    <div style="display: flex; align-items: center; justify-content: center; gap: 2rem; margin-top: 2rem;">
-        <div>
-            <img src="data:image/png;base64,{{ img_base64 }}" alt="Uploaded image" style="border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.08); width: 64px; height: 64px;">
-            <div style="font-size: 0.9rem; color: #888; margin-top: 0.5rem;">Processed image</div>
+        <div class="result-section">
+            <div class="processed-img-block">
+                <img src="data:image/png;base64,{{ img_base64 }}" alt="Uploaded image">
+                <div class="desc">Processed image</div>
+            </div>
+            <div class="result-card">
+                <i class="fa-solid fa-face-{{ 'smile' if emotion == 'happy' else 'frown' if emotion == 'sad' else 'meh' }}"></i>
+                Predicted emotion: <span style="font-weight:700;">{{ emotion|capitalize }}</span>
+            </div>
         </div>
-        <div class="result-card">
-            <i class="fa-solid fa-face-{{ 'smile' if emotion == 'happy' else 'frown' if emotion == 'sad' else 'meh' }}"></i>
-            Predicted emotion: <span style="font-weight:700;">{{ emotion|capitalize }}</span>
-        </div>
-    </div>
-{% endif %}
+        {% endif %}
     </div>
     <script>
         function updateFileName() {
@@ -143,6 +228,48 @@
             const fileName = document.getElementById('fileName');
             fileName.textContent = input.files.length > 0 ? input.files[0].name : 'No file selected';
         }
+
+        // Camera logic
+        const openCameraBtn = document.getElementById('openCameraBtn');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const video = document.getElementById('video');
+        const snapBtn = document.getElementById('snapBtn');
+        const canvas = document.getElementById('canvas');
+        const cameraImageInput = document.getElementById('cameraImageInput');
+        const fileInput = document.getElementById('fileInput');
+        let stream = null;
+
+        openCameraBtn.onclick = async function(e) {
+            e.preventDefault();
+            cameraContainer.style.display = 'flex';
+            canvas.style.display = 'none';
+            if (!stream) {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                } catch (err) {
+                    alert('Cannot access camera: ' + err);
+                }
+            }
+        };
+
+        snapBtn.onclick = function(e) {
+            e.preventDefault();
+            canvas.style.display = 'block';
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Stop the camera after photo
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            // Convert canvas to dataURL and set to hidden input
+            const dataURL = canvas.toDataURL('image/png');
+            cameraImageInput.value = dataURL;
+            // Hide file input to avoid confusion
+            fileInput.value = '';
+            document.getElementById('fileName').textContent = 'Photo from camera';
+            cameraContainer.style.display = 'none';
+        };
     </script>
 </body>
 </html>
