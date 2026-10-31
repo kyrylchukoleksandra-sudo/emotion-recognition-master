@@ -1,0 +1,18 @@
+{
+  "inventory_readable_images": 56892,
+  "read_error_records": 0,
+  "quarantined_conflict_images": 359,
+  "excluded_contempt_after_conflict_filter": 4229,
+  "excluded_same_label_exact_duplicates": 437,
+  "retained_images": 51867,
+  "split_counts": {
+    "train": 43494,
+    "val": 2535,
+    "test": 5838
+  },
+  "seed": 42,
+  "raf_validation_fraction": 0.15,
+  "subject_independent_split": false,
+  "near_duplicate_check_completed": false,
+  "test_subsets_may_have_changed": true
+}

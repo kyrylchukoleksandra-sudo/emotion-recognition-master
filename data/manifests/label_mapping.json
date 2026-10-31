@@ -1,0 +1,33 @@
+{
+  "emotions": [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "sad",
+    "surprise",
+    "neutral"
+  ],
+  "source_mappings": {
+    "AffectNet": {
+      "0": "angry",
+      "1": "disgust",
+      "2": "fear",
+      "3": "happy",
+      "4": "sad",
+      "5": "surprise",
+      "6": "neutral",
+      "7": "contempt"
+    },
+    "RAF-DB": {
+      "1": "surprise",
+      "2": "fear",
+      "3": "disgust",
+      "4": "happy",
+      "5": "sad",
+      "6": "angry",
+      "7": "neutral"
+    }
+  },
+  "affectnet_mapping_source": "user_confirmed"
+}

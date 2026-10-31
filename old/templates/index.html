@@ -120,9 +120,8 @@
             box-shadow: 0 2px 8px rgba(44,62,80,0.08);
         }
         .result-section {
-            display:
- flex;
-            flex-direction: row;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 2.5rem;
@@ -190,9 +189,9 @@
         <form method="post" enctype="multipart/form-data" id="uploadForm">
             <div class="form-row">
                 <label class="file-label" for="fileInput">
-                    <i class="fa-solid fa-image"></i> Choose Image
+                    <i class="fa-solid fa-image"></i> Choose Images
                 </label>
-                <input type="file" name="image" accept="image/*" class="custom-file-input" id="fileInput" onchange="updateFileName()">
+                <input type="file" name="image" accept="image/*" class="custom-file-input" id="fileInput" onchange="updateFileName()" multiple>
                 <span class="file-name" id="fileName">No file selected</span>
                 <button type="button" class="action-btn" id="openCameraBtn">
                     <i class="fa-solid fa-camera"></i> Use Camera
@@ -206,19 +205,25 @@
             </div>
             <input type="hidden" name="camera_image" id="cameraImageInput">
         </form>
-        {% if error %}
-            <div style="color: red; margin-bottom: 1rem;">{{ error }}</div>
+        {% if errors %}
+            {% for error in errors %}
+                <div style="color: red; margin-bottom: 1rem;">{{ error }}</div>
+            {% endfor %}
         {% endif %}
-        {% if emotion %}
+        {% if emotions %}
         <div class="result-section">
-            <div class="processed-img-block">
-                <img src="data:image/png;base64,{{ img_base64 }}" alt="Uploaded image">
-                <div class="desc">Processed image</div>
-            </div>
-            <div class="result-card">
-                <i class="fa-solid fa-face-{{ 'smile' if emotion == 'happy' else 'frown' if emotion == 'sad' else 'meh' }}"></i>
-                Predicted emotion: <span style="font-weight:700;">{{ emotion|capitalize }}</span>
-            </div>
+            {% for i in range(emotions|length) %}
+  <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem;">
+      <div class="processed-img-block">
+          <img src="data:image/png;base64,{{ img_base64_list[i] }}" alt="Uploaded image">
+          <div class="desc">Processed image</div>
+      </div>
+      <div class="result-card">
+          <i class="fa-solid fa-face-{{ 'smile' if emotions[i] == 'happy' else 'frown' if emotions[i] == 'sad' else 'meh' }}"></i>
+          Predicted emotion: <span style="font-weight:700;">{{ emotions[i]|capitalize }}</span>
+      </div>
+  </div>
+{% endfor %}
         </div>
         {% endif %}
     </div>
@@ -226,7 +231,15 @@
         function updateFileName() {
             const input = document.getElementById('fileInput');
             const fileName = document.getElementById('fileName');
-            fileName.textContent = input.files.length > 0 ? input.files[0].name : 'No file selected';
+            if (input.files.length > 0) {
+                let names = [];
+                for (let i = 0; i < input.files.length; i++) {
+                    names.push(input.files[i].name);
+                }
+                fileName.textContent = names.join(', ');
+            } else {
+                fileName.textContent = 'No file selected';
+            }
         }
 
         // Camera logic

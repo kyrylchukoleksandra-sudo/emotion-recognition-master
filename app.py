@@ -84,11 +84,11 @@ def preprocess_image(file_stream):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    emotion = None
-    error = None
-    img_base64 = None
+    emotions = []
+    errors = []
+    img_base64_list = []
     if request.method == 'POST':
-        file = request.files.get('image')
+        files = request.files.getlist('image')
         camera_image_data = request.form.get('camera_image')
         if camera_image_data:
             # Обробка фото з камери (dataURL)
@@ -96,20 +96,20 @@ def index():
                 header, encoded = camera_image_data.split(",", 1)
                 file_bytes = base64.b64decode(encoded)
                 file = io.BytesIO(file_bytes)
+                files = [file]
             except Exception:
-                error = "Invalid camera image data."
-                return render_template('index.html', emotion=emotion, error=error, img_base64=img_base64)
-        if file:
+                errors.append("Invalid camera image data.")
+        for file in files:
             try:
                 img, img_base64 = preprocess_image(file)
                 pred = model.predict(img)
                 predicted_class = np.argmax(pred, axis=1)[0]
                 emotion = emotion_labels[predicted_class]
-                print("Predicted emotion:", emotion)
+                emotions.append(emotion)
+                img_base64_list.append(img_base64)
             except Exception as e:
-                error = str(e)
-                print("Error:", error)
-    return render_template('index.html', emotion=emotion, error=error, img_base64=img_base64)
+                errors.append(str(e))
+    return render_template('index.html', emotions=emotions, errors=errors, img_base64_list=img_base64_list)
 
 if __name__ == '__main__':
     app.run(debug=True)
