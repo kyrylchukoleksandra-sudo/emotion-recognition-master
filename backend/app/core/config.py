@@ -41,9 +41,9 @@ class Settings:
     FACE_LANDMARKER_PATH: Path = BASE_DIR / "artifacts" / "models" / "face_landmarker.task"
     # URL для підключення до PostgreSQL / pgvector
     SQLALCHEMY_DATABASE_URI: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/emotion_db",
-    )
+    "DATABASE_URL",
+    "postgresql+psycopg://alexandrakirilchuk@localhost:5432/emotion_db",
+)
 
 
 settings = Settings()

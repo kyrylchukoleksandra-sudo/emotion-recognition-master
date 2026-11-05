@@ -1,0 +1,61 @@
+:root {
+  --bg-main: #fbf7f5;          /* Ніжний кремово-молочний фон */
+  --card-bg: #ffffff;          /* Чистий білий для карток з м'якою тінню */
+  --text-primary: #4a403a;     /* М'який кавово-сірий текст замість різкого чорного */
+  --text-secondary: #8c7f78;   /* Приглушений пастельно-коричневий */
+  
+  /* Пастельні акцентні кольори */
+  --pastel-pink: #f7d6d0;
+  --pastel-peach: #fce1cb;
+  --pastel-green: #d4e7d4;
+  --pastel-blue: #cce3de;
+  --pastel-purple: #e8d7f1;
+  --pastel-yellow: #fef5d1;
+  
+  --border-color: #f0e6e1;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* М'які пастельні кнопки */
+button {
+  font-family: inherit;
+  border-radius: 12px !important;
+  border: none !important;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+button:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.97);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Красиві округлі кастомні скролбари */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pastel-pink);
+  border-radius: 10px;
+}

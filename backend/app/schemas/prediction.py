@@ -8,6 +8,16 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+class SimilarFaceResult(BaseModel):
+    """Schema for a single similar face record from vector search."""
+
+    id: int
+    image_name: str
+    emotion_label: str
+    confidence: float
+    distance: float
+
+
 class EmotionPredictionResponse(BaseModel):
     """Schema for individual image prediction result."""
 
@@ -19,6 +29,9 @@ class EmotionPredictionResponse(BaseModel):
     bounding_box: List[int] = Field(..., description="Face bounding box [x, y, w, h]")
     fused_vector_dim: int = Field(..., description="Dimension of the fused feature vector")
     execution_provider: str = Field(..., description="Inference runtime provider (e.g., CPU/CUDA)")
+    
+    # 💡 Обов'язково додаємо масив схожих облич
+    similar_faces: Optional[List[SimilarFaceResult]] = Field(default_factory=list)
 
 
 class SimilarFeatureResult(BaseModel):

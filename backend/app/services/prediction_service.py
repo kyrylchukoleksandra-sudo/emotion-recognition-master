@@ -33,6 +33,7 @@ class PredictionOrchestratorService:
         image_bytes: bytes,
         image_name: str = "upload.jpg",
         save_to_db: bool = True,
+        is_public: bool = False,
     ) -> Tuple[EmotionPredictionResponse, np.ndarray]:
         """
         Executes end-to-end emotion recognition pipeline on raw image bytes.
@@ -57,28 +58,44 @@ class PredictionOrchestratorService:
         # 4. Препроцесинг кропу обличчя
         preprocessed = preprocess_camera_face(detection_res.aligned_face, color_order="RGB")
 
-        # 5. Інференс вашої нейронки classifier_v3.onnx (подаємо і кроп, і вектор 61-d)
+        # 5. Інференс нейромережі classifier_v3.onnx
         prediction = self.predictor.predict(
             face_image=preprocessed.image,
             geom_vector=mimic_features.feature_vector,
         )
 
-        # 6. Злиття векторів (модуль 3.9)
+        # 6. Злиття векторів (модуль 3.9 -> 1021-d)
         fused_res = fuse_feature_vectors(
             visual_embedding=prediction.visual_embedding,
             geometric_vector=mimic_features.feature_vector,
         )
 
-        # 7. Збереження у базу даних PostgreSQL (pgvector)
-        if save_to_db and self.db is not None:
+        similar_faces = []
+
+        if self.db is not None:
             repo = FeatureRepository(self.db)
-            repo.save_feature_record(
-                image_name=image_name,
-                emotion_label=prediction.dominant_emotion,
-                fused_vector=fused_res.fused_vector,
-                confidence=prediction.confidence,
-                metadata_json=mimic_features.raw_metrics,
-            )
+
+            # 7. Шукаємо схожі вектори в pgvector ДО або ПОСЛЯ збереження
+            # (беремо 5 найближчих збігів за косинусною відстанню)
+            if hasattr(repo, "search_similar_faces"):
+                similar_faces = repo.search_similar_faces(
+                    fused_vector=fused_res.fused_vector,
+                    top_k=5,
+                    only_public=False,  # Встановіть True, якщо шукати лише серед публічних
+                )
+
+            # 8. Збереження у базу даних PostgreSQL (pgvector)
+            if save_to_db:
+                repo.save_feature_record(
+                    image_name=image_name,
+                    emotion_label=prediction.dominant_emotion,
+                    fused_vector=fused_res.fused_vector,
+                    confidence=prediction.confidence,
+                    valence=prediction.valence,
+                    arousal=prediction.arousal,
+                    is_public=is_public,
+                    metadata_json=mimic_features.raw_metrics,
+                )
 
         response = EmotionPredictionResponse(
             dominant_emotion=prediction.dominant_emotion,
@@ -89,6 +106,7 @@ class PredictionOrchestratorService:
             bounding_box=list(detection_res.bounding_box),
             fused_vector_dim=fused_res.total_dim,
             execution_provider=prediction.execution_provider,
+            similar_faces=similar_faces,  # 👈 
         )
 
         return response, fused_res.fused_vector
